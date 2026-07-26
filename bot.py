@@ -29,11 +29,16 @@ def play_next(error=None):
         queue.extend(build_shuffled_queue())
 
     song = queue.pop(0)
+
+    try:
+        stream_url = get_stream_url(song["video_id"])
+    except Exception as e:
+        print(f"Failed to load '{song['title']}': {e}")
+        play_next()
+        return
+
     print(f"Now playing: {song['title']}")
-
-    stream_url = get_stream_url(song["video_id"])
     source = discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTIONS)
-
     voice_client.play(source, after=lambda e: play_next(e))
 
 
