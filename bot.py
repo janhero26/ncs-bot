@@ -12,6 +12,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 queue = []
 voice_client = None
+current_song = None
 
 
 def get_stream_url(video_id: str) -> str:
@@ -22,6 +23,8 @@ def get_stream_url(video_id: str) -> str:
 
 
 def play_next(error=None):
+    global current_song
+
     if error:
         print(f"Playback error: {error}")
 
@@ -37,6 +40,7 @@ def play_next(error=None):
         play_next()
         return
 
+    current_song = song
     print(f"Now playing: {song['title']}")
     source = discord.FFmpegPCMAudio(stream_url, **FFMPEG_OPTIONS)
     voice_client.play(source, after=lambda e: play_next(e))
@@ -58,6 +62,41 @@ async def on_ready():
 
     queue.extend(build_shuffled_queue())
     play_next()
+
+
+@bot.command(name="skip")
+async def skip(ctx):
+    if voice_client is None or not voice_client.is_playing():
+        await ctx.send("Nothing is playing right now.")
+        return
+
+    voice_client.stop()
+    await ctx.send("Skipped.")
+
+
+@bot.command(name="nowplaying")
+async def nowplaying(ctx):
+    if current_song is None:
+        await ctx.send("Nothing is playing right now.")
+        return
+
+    await ctx.send(f"Now playing: **{current_song['title']}**")
+
+
+@bot.command(name="queue")
+async def show_queue(ctx):
+    if not queue:
+        await ctx.send("The queue is empty (will reshuffle on next song).")
+        return
+
+    upcoming = queue[:10]
+    lines = [f"{i + 1}. {song['title']}" for i, song in enumerate(upcoming)]
+    message = "\n".join(lines)
+
+    if len(queue) > 10:
+        message += f"\n...and {len(queue) - 10} more."
+
+    await ctx.send(f"**Upcoming:**\n{message}")
 
 
 if __name__ == "__main__":
