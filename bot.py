@@ -65,13 +65,22 @@ async def on_ready():
 
 
 @bot.command(name="skip")
-async def skip(ctx):
+async def skip(ctx, amount: int = 1):
     if voice_client is None or not voice_client.is_playing():
         await ctx.send("Nothing is playing right now.")
         return
 
-    voice_client.stop()
-    await ctx.send("Skipped.")
+    if amount < 1:
+        await ctx.send("Amount must be at least 1.")
+        return
+
+    # remove the next (amount - 1) songs from the queue without playing them
+    skipped_from_queue = min(amount - 1, len(queue))
+    del queue[:skipped_from_queue]
+
+    voice_client.stop()  # triggers play_next() via the after= callback
+
+    await ctx.send(f"Skipped {amount} song(s).")
 
 
 @bot.command(name="nowplaying")
